@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Jobder - Fetching Jobs</title>
+</head>
+<body>
+    <h1>Fetching Jobs from France Travail API</h1>
+    <div id="job-listings"></div>
+
+    <script>
+        async function getAccessToken() {
+            const clientId = 'PAR_testoffreapi_6510d76b2c4c41fc07858955b1f083273b54412c372c461c88fa91f03035925b';
+            const clientSecret = '91710efdc7f928d9a614066c147b22d62178d9a1d2270f2d1c20a68dde5c3912';
+            const scope = 'api_offresdemploiv2 o2dsoffre'; // Ajoutez vos scopes ici
+
+            const tokenUrl = 'https://entreprise.francetravail.fr/connexion/oauth2/access_token?realm=%2Fpartenaire'; // Ajout du paramètre realm
+            const params = new URLSearchParams();
+            params.append('grant_type', 'client_credentials');
+            params.append('client_id', clientId);
+            params.append('client_secret', clientSecret);
+            params.append('scope', scope); // Ajout du scope
+
+            try {
+                const response = await fetch(tokenUrl, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/x-www-form-urlencoded',
+                    },
+                    body: params,
+                });
+
+                const data = await response.json();
+                console.log('Token Response:', data); // Afficher la réponse pour le débogage
+                
+                // Vérifiez si le token est bien présent
+                if (data.access_token) {
+                    console.log('Access Token:', data.access_token);
+                    return data.access_token;
+                } else {
+                    console.error('No access token found:', data);
+                    return null; // Retourner null si le token n'est pas trouvé
+                }
+            } catch (error) {
+                console.error('Error fetching access token:', error);
+            }
+        }
+
+        // Fonction pour récupérer les offres d'emploi
+        async function fetchJobOffers() {
+            const token = await getAccessToken();
+
+            if (!token) {
+                document.getElementById('job-listings').innerText = 'Failed to get access token!';
+                return;
+            }
+
+            const jobOffersUrl = 'https://api.francetravail.io/partenaire/offresdemploi/v2/offres/search?codeROME=M1805';
+            try {
+                const response = await fetch(jobOffersUrl, {
+                    method: 'GET',
+                    headers: {
+                        'Authorization': `Bearer ${token}`,
+                        'Content-Type': 'application/json'
+                    }
+                });
+
+                const jobData = await response.json();
+                console.log('Job Offers Response:', jobData); // Afficher la réponse pour le débogage
+                
+                // Vérifiez que le tableau des résultats existe
+                if (jobData.resultats && Array.isArray(jobData.resultats)) {
+                    let jobHtml = '';
+                    jobData.resultats.forEach(job => {
+                        jobHtml += `
+                            <div>
+                                <h3>${job.intitule}</h3>
+                                <p>${job.lieuTravail.libelle}</p>
+                                <a href="${job.lienOffre}" target="_blank">Apply Now</a>
+                            </div>
+                            <hr/>
+                        `;
+                    });
+                    document.getElementById('job-listings').innerHTML = jobHtml;
+                } else {
+                    console.error('No job results found');
+                    document.getElementById('job-listings').innerText = 'No job offers found.';
+                }
+
+            } catch (error) {
+                console.error('Error fetching job offers:', error);
+                document.getElementById('job-listings').innerText = 'Failed to fetch job offers!';
+            }
+        }
+
+        // Exécutez la fonction pour récupérer les offres d'emploi
+        fetchJobOffers();
+    </script>
+</body>
+</html>
