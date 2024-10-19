@@ -27,17 +27,16 @@
                 const response = await fetch(tokenUrl, {
                     method: 'POST',
                     headers: {
-                        'Content-Type': 'application/x-www-form-urlencoded',
+                        'Content-Type': 'application/x-www-form-urlencoded', // Utilisez le bon type de contenu
                     },
-                    body: params,
+                    body: params.toString(), // Convertir les paramètres en chaîne URL-encoded
                 });
 
                 // Vérification de la réponse
                 if (!response.ok) {
                     const errorData = await response.json();
-                    // Afficher l'erreur directement sur la page
                     document.getElementById('job-listings').innerText = `Erreur de token : ${errorData.error} - ${errorData.error_description}`;
-                    return null; // Retourner null si le token n'est pas valide
+                    return null;
                 }
 
                 const data = await response.json();
@@ -46,7 +45,7 @@
                     return data.access_token;
                 } else {
                     document.getElementById('job-listings').innerText = 'Aucun token d\'accès trouvé.';
-                    return null; // Retourner null si le token n'est pas trouvé
+                    return null;
                 }
             } catch (error) {
                 document.getElementById('job-listings').innerText = 'Erreur lors de la récupération du token : ' + error.message;
@@ -75,7 +74,6 @@
                 // Vérification de la réponse
                 if (!response.ok) {
                     const errorData = await response.json();
-                    // Afficher l'erreur directement sur la page
                     document.getElementById('job-listings').innerText = `Erreur lors de la récupération des offres : ${errorData.error} - ${errorData.error_description}`;
                     return;
                 }
