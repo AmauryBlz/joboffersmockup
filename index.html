@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>FranceTravail API - Offres d'emploi</title>
+</head>
+<body>
+    <h1>Liste des Offres d'emploi</h1>
+    <div id="job-listings"></div>
+
+    <script>
+        // Fonction pour obtenir le token d'accès via une requête POST
+        async function getAccessToken() {
+            const clientId = 'PAR_testoffreapi_6510d76b2c4c41fc07858955b1f083273b54412c372c461c88fa91f03035925b'; 
+            const clientSecret = '91710efdc7f928d9a614066c147b22d62178d9a1d2270f2d1c20a68dde5c3912'; 
+            const tokenUrl = 'https://entreprise.francetravail.fr/connexion/oauth2/access_token';
+            const scope = 'o2dsoffre';
+
+            // Paramètres de la requête POST pour obtenir le token
+            const params = new URLSearchParams();
+            params.append('grant_type', 'client_credentials');
+            params.append('client_id', clientId);
+            params.append('client_secret', clientSecret);
+            params.append('scope', scope);
+
+            try {
+                const response = await fetch(tokenUrl, {
+                    method: 'POST',  // Requête POST
+                    headers: {
+                        'Content-Type': 'application/x-www-form-urlencoded'  // Type de contenu
+                    },
+                    body: params.toString()  // Encodage des paramètres
+                });
+
+                // Vérification de la réponse
+                if (!response.ok) {
+                    const errorData = await response.json();
+                    console.error('Erreur lors de la récupération du token :', errorData);
+                    document.getElementById('job-listings').innerText = 
+                        `Erreur de token : ${response.status} - ${errorData.error} : ${errorData.error_description}`;
+                    return null;  // Retourne null en cas d'erreur
+                }
+
+                // Traitement de la réponse en JSON
+                const data = await response.json();
+                console.log('Access Token:', data);  // Afficher le token dans la console
+                return data.access_token;  // Retourne le token d'accès
+
+            } catch (error) {
+                console.error('Erreur lors de la requête pour obtenir le token :', error);
+                document.getElementById('job-listings').innerText = 'Erreur lors de la récupération du token d\'accès.';
+            }
+        }
+
+        // Fonction pour récupérer les offres d'emploi via une requête GET
+        async function fetchJobOffers() {
+            const token = await getAccessToken();  // Récupération du token
+            if (!token) {
+                document.getElementById('job-listings').innerText = 'Échec de l\'obtention du token d\'accès';
+                return;
+            }
+
+            // URL de l'API pour récupérer les offres d'emploi
+            const jobOffersUrl = 'https://api.francetravail.io/partenaire/offresdemploi/v2/offres/search?codeROME=M1805';
+            
+            try {
+                const response = await fetch(jobOffersUrl, {
+                    method: 'GET',  // Requête GET
+                    headers: {
+                        'Authorization': `Bearer ${token}`,  // Utilisation du token pour l'authentification
+                        'Content-Type': 'application/json'  // Type de contenu
+                    }
+                });
+
+                // Vérification de la réponse
+                if (!response.ok) {
+                    const errorData = await response.json();
+                    console.error('Erreur lors de la récupération des offres :', errorData);
+                    document.getElementById('job-listings').innerText = 
+                        `Erreur lors de la récupération des offres : ${response.status} - ${errorData.error}`;
+                    return;
+                }
+
+                // Traitement des données renvoyées par l'API
+                const data = await response.json();
+                displayJobOffers(data.resultats);  // Afficher les offres
+
+            } catch (error) {
+                console.error('Erreur lors de la récupération des offres :', error);
+                document.getElementById('job-listings').innerText = 'Échec de la récupération des offres';
+            }
+        }
+
+        // Fonction pour afficher les offres d'emploi dans le DOM
+        function displayJobOffers(offres) {
+            const jobListings = document.getElementById('job-listings');
+            jobListings.innerHTML = '';  // Vider l'ancien contenu
+
+            if (!offres || offres.length === 0) {
+                jobListings.innerText = 'Aucune offre d\'emploi trouvée';
+                return;
+            }
+
+            // Boucler sur les offres et les ajouter dans le DOM
+            offres.forEach(offer => {
+                const offerElement = document.createElement('div');
+                offerElement.innerHTML = `
+                    <h2>${offer.intitule}</h2>
+                    <p>${offer.lieuTravail.libelle}</p>
+                    <p>Type de contrat: ${offer.typeContratLibelle}</p>
+                    <a href="${offer.urlPostulation}" target="_blank">Postuler</a>
+                    <hr>
+                `;
+                jobListings.appendChild(offerElement);
+            });
+        }
+
+        // Charger les offres d'emploi dès le chargement de la page
+        fetchJobOffers();
+    </script>
+</body>
+</html>
